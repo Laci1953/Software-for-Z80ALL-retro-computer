@@ -1,0 +1,4 @@
+z80as trcrtcpm
+z80as vgadrive
+z80as rand
+c -v -c -o tetris.c

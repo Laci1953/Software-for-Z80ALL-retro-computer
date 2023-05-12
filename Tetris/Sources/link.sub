@@ -1,0 +1,4 @@
+xsub
+link
+-ptext=100h,data,bss -c100h -otetris.com trcrtcpm.obj \
+tetris.obj vgadrive.obj rand.obj libc.lib
