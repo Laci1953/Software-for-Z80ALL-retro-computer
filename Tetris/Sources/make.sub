@@ -1,4 +1,5 @@
 z80as trcrtcpm
 z80as vgadrive
 z80as rand
+z80as ds1302
 c -v -c -o tetris.c
