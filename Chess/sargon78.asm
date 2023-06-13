@@ -2115,7 +2115,7 @@ PLYDEP:  DB      "select look ahead (1-6)"
 TITLE4:  DB      "                "
 WSMOVE:  DB      "WHOSE MOVE IS IT?"
 BLANKR:  DB      '[',1CH,']'     ; Control-\
-P_PEP:   DB      "PxPep"
+P_PEP:   DB      "pxpep"
 INVAL1:  DB      "invalid move"
 INVAL2:  DB      "try again"
 
