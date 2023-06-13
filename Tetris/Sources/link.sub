@@ -1,4 +1,4 @@
 xsub
 link
 -ptext=100h,data,bss -c100h -otetris.com trcrtcpm.obj \
-tetris.obj vgadrive.obj rand.obj libc.lib
+tetris.obj vgadrive.obj ds1302.obj rand.obj libc.lib
