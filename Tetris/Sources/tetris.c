@@ -90,6 +90,9 @@ int shapes[] = {
 unsigned int     xrnd(void);
 void    xrndseed(void);
 
+void	InitRTC(void);
+long	GetTime(void);
+
 void draw(int x, int y, int c)
 {
         gotoxy(x, y);
@@ -123,6 +126,8 @@ int wait(void)
 int update(void)
 {
         int x, y, c;
+
+	GetTime();
 
         /* Display board. */
         for (y = 1; y < B_ROWS - 1; y++)
@@ -182,6 +187,8 @@ void main(void)
         int c = 0, i, j, *ptr;
         int pos = 17;
         int *backup;
+	unsigned long t;
+	unsigned int h,m,s;
 
         /* Initialize board, grey border, used to be white(7) */
         ptr = board;
@@ -203,6 +210,8 @@ void main(void)
         CrtClearLine(47);
 
         shape = next_shape();
+
+	InitRTC();
 
         while (1)
         {
@@ -234,6 +243,9 @@ void main(void)
                                 shape = next_shape();
 
 				pos = 17;
+				
+				if (!fits_in(shape, pos))
+					c = keys[KEY_QUIT];
                         }
                 }
 
@@ -285,4 +297,11 @@ void main(void)
                 c = update();
                 place(shape, pos, 0);
         }
+
+	clrscr();
+	t = GetTime();
+	s = t & 0xFF;
+	m = t >> 8;
+	h = (t >> 16) & 0xFF;
+	printf("Elapsed time: %02u:%02u:%02u\r\n", h, m, s);
 }
