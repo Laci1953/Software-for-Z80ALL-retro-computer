@@ -2097,7 +2097,7 @@ ANAMSG:  DB      "WOULD YOU LIKE TO ANALYZE A POSITION?"
 CLRMSG:  DB      "do you want to play white(w) or black(b)?"
 TITLE1:  DB      "sargon"
 TITLE2:  DB      "player"
-SPACE:   DB      "          "    ; For output of blank area
+SPACE:   DB      "                   "    ; For output of blank area
 MVENUM:  DB      "01 "
 TITLE3:  DB      "  ====== ======"
 MVEMSG:  DB      "a1-a1"
@@ -2261,8 +2261,6 @@ DRIV01:
 	EXIT
 ;       JP      Z,ANALYS        ; If so then jump to ANALYSing a position
 GO:
-	call	InitRTC		; Initialize real time clock
-
         SUB     a               ; Code of White is zero
         LD      (COLOR),a       ; White always moves first
 
@@ -2270,7 +2268,9 @@ GO:
 	call	show_string_de
 
         CALL    INTERR          ; Players color/search depth
-        call    CrtClear
+
+        call    CrtClear	; Clear screen
+	call	InitRTC		; Initialize real time clock
 
         CALL    INITBD          ; Initialize board array
         LD      a,1             ; Move number is 1 at at start
@@ -2285,25 +2285,50 @@ GO:
         CALL    DSPBRD          ; Set up graphics board
         PRTLIN  TITLE4,15       ; Put up player headings
         PRTLIN  TITLE3,15
-DRIV04: PRTBLK  MVENUM,3        ; Display move number
+DRIV04: 
+	PRTBLK  MVENUM,3        ; Display move number
         LD      a,(KOLOR)       ; Bring in computer's color
         AND     a               ; Is it white ?
         JR      NZ,DR08         ; No - jump
+
         CALL    PGIFND          ; New page if needed
         CP      1               ; Was page turned ?
         CALL    Z,TBCPCL        ; Yes - Tab to computers column
+
+	call	GetStartTime
         CALL    CPTRMV          ; Make and write computers move
+	call	GetStopTime
         PRTBLK  SPACE,1         ; Output a space
+	call	PrintLapseTime
+        PRTBLK  SPACE,1         ; Output a space
+
+	call	GetStartTime
         CALL    PLYRMV          ; Accept and make players move
-        CARRET                  ; New line
-        JR      DR0C            ; Jump
-DR08:   CALL    PLYRMV          ; Accept and make players move
+	call	GetStopTime
         PRTBLK  SPACE,1         ; Output a space
-        CALL    PGIFND          ; New page if needed
-        CP      1             ; Was page turned ?
-        CALL    Z,TBCPCL        ; Yes - Tab to computers column
-        CALL    CPTRMV          ; Make and write computers move
+	call	PrintLapseTime
         CARRET                  ; New line
+
+        JR      DR0C            ; Jump
+DR08:   
+	call	GetStartTime
+	CALL    PLYRMV          ; Accept and make players move
+	call	GetStopTime
+        PRTBLK  SPACE,1         ; Output a space
+	call	PrintLapseTime
+        PRTBLK  SPACE,1         ; Output a space
+
+        CALL    PGIFND          ; New page if needed
+        CP      1               ; Was page turned ?
+        CALL    Z,TBCPCL        ; Yes - Tab to computers column
+
+	call	GetStartTime
+        CALL    CPTRMV          ; Make and write computers move
+	call	GetStopTime
+        PRTBLK  SPACE,1         ; Output a space
+	call	PrintLapseTime
+        CARRET                  ; New line
+
 DR0C:   LD      hl,MVENUM+2     ; Addr of 3rd char of move
         LD      a,20H           ; Ascii space
         CP      (hl)          ; Is char a space ?
@@ -2529,7 +2554,7 @@ TBPLCL: PRTBLK  MVENUM,3        ; Reproduce move number
         LD      a,(KOLOR)       ; Computers color
         AND     a             ; Is computer white ?
         RET     NZ              ; No - return
-        PRTBLK  SPACE,6         ; Tab to next column
+        PRTBLK  SPACE,15         ; Tab to next column
         RET                     ; Return
 
 ;***********************************************************
@@ -2553,7 +2578,7 @@ TBCPCL: PRTBLK  MVENUM,3        ; Reproduce move number
         LD      a,(KOLOR)       ; Computer's color
         AND     a             ; Is computer white ?
         RET     Z               ; Yes - return
-        PRTBLK  SPACE,6         ; Tab to next column
+        PRTBLK  SPACE,15        ; Tab to next column
         RET                     ; Return
 
 ;***********************************************************
@@ -3050,126 +3075,126 @@ RY0C:   LD      a,(M1)          ; Current position
 ; Letters and numbers around the edge of the board
 axis_table:
 ;	   x  y  V
-        db 18,13,'8'
-        db 18,16,'7'
-        db 18,19,'6'
-        db 18,22,'5'
-        db 18,25,'4'
-        db 18,28,'3'
-        db 18,31,'2'
-        db 18,34,'1'
-        db 21,37,'a'
-        db 24,37,'b'
-        db 27,37,'c'
-        db 30,37,'d'
-        db 33,37,'e'
-        db 36,37,'f'
-        db 39,37,'g'
-        db 42,37,'h'
+        db 37,13,'8'
+        db 37,16,'7'
+        db 37,19,'6'
+        db 37,22,'5'
+        db 37,25,'4'
+        db 37,28,'3'
+        db 37,31,'2'
+        db 37,34,'1'
+        db 40,37,'a'
+        db 43,37,'b'
+        db 46,37,'c'
+        db 49,37,'d'
+        db 52,37,'e'
+        db 55,37,'f'
+        db 58,37,'g'
+        db 61,37,'h'
 ;16
-	db 19,11,'+'
-	db 19,12,'|'
-	db 19,13,'|'
-	db 19,14,'|'
-	db 19,15,'|'
-	db 19,16,'|'
-	db 19,17,'|'
-	db 19,18,'|'
-	db 19,19,'|'
-	db 19,20,'|'
-	db 19,21,'|'
-	db 19,22,'|'
-	db 19,23,'|'
-	db 19,24,'|'
-	db 19,25,'|'
-	db 19,26,'|'
-	db 19,27,'|'
-	db 19,28,'|'
-	db 19,29,'|'
-	db 19,30,'|'
-	db 19,31,'|'
-	db 19,32,'|'
-	db 19,33,'|'
-	db 19,34,'|'
-	db 19,35,'|'
-	db 19,36,'+'
+	db 38,11,'+'
+	db 38,12,'|'
+	db 38,13,'|'
+	db 38,14,'|'
+	db 38,15,'|'
+	db 38,16,'|'
+	db 38,17,'|'
+	db 38,18,'|'
+	db 38,19,'|'
+	db 38,20,'|'
+	db 38,21,'|'
+	db 38,22,'|'
+	db 38,23,'|'
+	db 38,24,'|'
+	db 38,25,'|'
+	db 38,26,'|'
+	db 38,27,'|'
+	db 38,28,'|'
+	db 38,29,'|'
+	db 38,30,'|'
+	db 38,31,'|'
+	db 38,32,'|'
+	db 38,33,'|'
+	db 38,34,'|'
+	db 38,35,'|'
+	db 38,36,'+'
 ;+2 +3*8
-	db 44,11,'+'
-	db 44,12,'|'
-	db 44,13,'|'
-	db 44,14,'|'
-	db 44,15,'|'
-	db 44,16,'|'
-	db 44,17,'|'
-	db 44,18,'|'
-	db 44,19,'|'
-	db 44,20,'|'
-	db 44,21,'|'
-	db 44,22,'|'
-	db 44,23,'|'
-	db 44,24,'|'
-	db 44,25,'|'
-	db 44,26,'|'
-	db 44,27,'|'
-	db 44,28,'|'
-	db 44,29,'|'
-	db 44,30,'|'
-	db 44,31,'|'
-	db 44,32,'|'
-	db 44,33,'|'
-	db 44,34,'|'
-	db 44,35,'|'
-	db 44,36,'+'
+	db 63,11,'+'
+	db 63,12,'|'
+	db 63,13,'|'
+	db 63,14,'|'
+	db 63,15,'|'
+	db 63,16,'|'
+	db 63,17,'|'
+	db 63,18,'|'
+	db 63,19,'|'
+	db 63,20,'|'
+	db 63,21,'|'
+	db 63,22,'|'
+	db 63,23,'|'
+	db 63,24,'|'
+	db 63,25,'|'
+	db 63,26,'|'
+	db 63,27,'|'
+	db 63,28,'|'
+	db 63,29,'|'
+	db 63,30,'|'
+	db 63,31,'|'
+	db 63,32,'|'
+	db 63,33,'|'
+	db 63,34,'|'
+	db 63,35,'|'
+	db 63,36,'+'
 ;+2 +3*8
-	db 20,11,'-'
-	db 21,11,'-'
-	db 22,11,'-'
-	db 23,11,'-'
-	db 24,11,'-'
-	db 25,11,'-'
-	db 26,11,'-'
-	db 27,11,'-'
-	db 28,11,'-'
-	db 29,11,'-'
-	db 30,11,'-'
-	db 31,11,'-'
-	db 32,11,'-'
-	db 33,11,'-'
-	db 34,11,'-'
-	db 35,11,'-'
-	db 36,11,'-'
-	db 37,11,'-'
-	db 38,11,'-'
 	db 39,11,'-'
 	db 40,11,'-'
 	db 41,11,'-'
 	db 42,11,'-'
 	db 43,11,'-'
+	db 44,11,'-'
+	db 45,11,'-'
+	db 46,11,'-'
+	db 47,11,'-'
+	db 48,11,'-'
+	db 49,11,'-'
+	db 50,11,'-'
+	db 51,11,'-'
+	db 52,11,'-'
+	db 53,11,'-'
+	db 54,11,'-'
+	db 55,11,'-'
+	db 56,11,'-'
+	db 57,11,'-'
+	db 58,11,'-'
+	db 59,11,'-'
+	db 60,11,'-'
+	db 61,11,'-'
+	db 62,11,'-'
 ;+3*8
-	db 20,36,'-'
-	db 21,36,'-'
-	db 22,36,'-'
-	db 23,36,'-'
-	db 24,36,'-'
-	db 25,36,'-'
-	db 26,36,'-'
-	db 27,36,'-'
-	db 28,36,'-'
-	db 29,36,'-'
-	db 30,36,'-'
-	db 31,36,'-'
-	db 32,36,'-'
-	db 33,36,'-'
-	db 34,36,'-'
-	db 35,36,'-'
-	db 36,36,'-'
-	db 37,36,'-'
-	db 38,36,'-'
 	db 39,36,'-'
 	db 40,36,'-'
 	db 41,36,'-'
 	db 42,36,'-'
 	db 43,36,'-'
+	db 44,36,'-'
+	db 45,36,'-'
+	db 46,36,'-'
+	db 47,36,'-'
+	db 48,36,'-'
+	db 49,36,'-'
+	db 50,36,'-'
+	db 51,36,'-'
+	db 52,36,'-'
+	db 53,36,'-'
+	db 54,36,'-'
+	db 55,36,'-'
+	db 56,36,'-'
+	db 57,36,'-'
+	db 58,36,'-'
+	db 59,36,'-'
+	db 60,36,'-'
+	db 61,36,'-'
+	db 62,36,'-'
 ;+3*8 total 116
 ;
 ;	Print a character to the screen at (Cursor)
@@ -3630,7 +3655,7 @@ CONVRT: PUSH    bc              ; Save registers
         LD      e,a             ; File number is multiplicand
         CALL    MLTPLY          ; Giving file displacement
         LD      a,d             ; Save
-        ADD     a, 20           ; Move file across to suitable place on screen
+        ADD     a, 39           ; Move file across to suitable place on screen
         LD      h,a             ; Low order address byte
 
         LD      d,3             ; Rank multiplier
@@ -3859,6 +3884,325 @@ copyright_message:
     db 13,10
     db 'Adapted to Z80ALL by Ladislau Szilagyi in June 2023',13,10,13,10
     db '$'
+;
+;********************************************************************
+;	Time lapse computing
+;
+StartTime:	defs	3	;H,M,S
+StopTime:	defs	3	;H,M,S
+DeltaTime:	defs	3	;H,M,S
+;
+StartSecs:	defs	2
+StopSecs:	defs	2
+DeltaSecs:	defs	2
+;
+TimeLapse:	defs	8	;00:00:00 using ASCII decimal digits
+		defb	'$'
+
+;**************************************************************************
+;	16 bit divide and modulus routines
+
+;	called with dividend in hl and divisor in de
+
+;	returns with result in hl.
+
+;	adiv (amod) is signed divide (modulus), ldiv (lmod) is unsigned
+
+amod:
+	call	adiv
+	ex	de,hl		;put modulus in hl
+	ret
+
+lmod:
+	call	ldiv
+	ex	de,hl
+	ret
+
+ldiv:
+	xor	a
+	ex	af,af'
+	ex	de,hl
+	jr	dv1
+
+
+adiv:
+	ld	a,h
+	xor	d		;set sign flag for quotient
+	ld	a,h		;get sign of dividend
+	ex	af,af'
+	call	negif16
+	ex	de,hl
+	call	negif16
+dv1:	ld	b,1
+	ld	a,h
+	or	l
+	ret	z
+dv8:	push	hl
+	add	hl,hl
+	jr	c,dv2
+	ld	a,d
+	cp	h
+	jr	c,dv2
+	jp	nz,dv6
+	ld	a,e
+	cp	l
+	jr	c,dv2
+dv6:	pop	af
+	inc	b
+	jp	dv8
+
+dv2:	pop	hl
+	ex	de,hl
+	push	hl
+	ld	hl,0
+	ex	(sp),hl
+
+dv4:	ld	a,h
+	cp	d
+	jr	c,dv3
+	jp	nz,dv5
+	ld	a,l
+	cp	e
+	jr	c,dv3
+
+dv5:	sbc	hl,de
+dv3:	ex	(sp),hl
+	ccf
+	adc	hl,hl
+	srl	d
+	rr	e
+	ex	(sp),hl
+	djnz	dv4
+	pop	de
+	ex	de,hl
+	ex	af,af'
+	call	m,negat16
+	ex	de,hl
+	or	a			;test remainder sign bit
+	call	m,negat16
+	ex	de,hl
+	ret
+
+negif16:bit	7,h
+	ret	z
+negat16:ld	b,h
+	ld	c,l
+	ld	hl,0
+	or	a
+	sbc	hl,bc
+	ret
+
+;	16 bit integer multiply
+
+;	on entry, left operand is in hl, right operand in de
+
+amul:
+lmul:
+	ld	a,e
+	ld	c,d
+	ex	de,hl
+	ld	hl,0
+	ld	b,8
+	call	mult8b
+	ex	de,hl
+	jr	3f
+2:	add	hl,hl
+3:
+	djnz	2b
+	ex	de,hl
+1:
+	ld	a,c
+mult8b:
+	srl	a
+	jp	nc,1f
+	add	hl,de
+1:	ex	de,hl
+	add	hl,hl
+	ex	de,hl
+	ret	z
+	djnz	mult8b
+	ret
+
+;********************************************************************
+;
+;	Computes DeltaTime = StopTime - StartTime
+;	convert-it to ASCII 
+;	and store-it to TimeLapse
+;
+ComputeLapse:
+				;compute StartSecs
+
+	ld	a,(StartTime)	;Start Hour
+	ld	e,a
+	ld	d,0		;DE=Start Hour
+	ld	hl,3600
+	call	lmul		;HL=Start Hour x 3600
+	push	hl
+
+	ld	a,(StartTime+1)	;Start Minutes
+	ld	e,a
+	ld	d,0
+	ld	hl,60
+	call	lmul		;HL=Start Minutes x 60
+
+	ld	a,(StartTime+2)	;Start Seconds
+	ld	e,a
+	ld	d,0		;DE=Start Seconds
+
+	add	hl,de
+	pop	de
+	add	hl,de		;HL = StartSecs
+	ld	(StartSecs),hl
+	
+				;compute StopSecs
+
+	ld	a,(StopTime)	;Stop Hour
+	ld	e,a
+	ld	d,0		;DE=Stop Hour
+	ld	hl,3600
+	call	lmul		;HL=Stop Hour x 3600
+	push	hl
+
+	ld	a,(StopTime+1)	;Stop Minutes
+	ld	e,a
+	ld	d,0
+	ld	hl,60
+	call	lmul		;HL=Stop Minutes x 60
+
+	ld	a,(StopTime+2)	;Stop Seconds
+	ld	e,a
+	ld	d,0		;DE=Stop Seconds
+
+	add	hl,de
+	pop	de
+	add	hl,de		;HL = StopSecs
+	ld	(StopSecs),hl
+
+				;compute DeltaSecs
+	xor	a		;CARRY=0
+	ld	de,(StartSecs)
+	sbc	hl,de
+	ld	(DeltaSecs),hl
+				;compute DeltaTime
+	ld	de,3600
+	call	ldiv		;HL=DeltaSecs/3600
+	ld	a,l
+	ld	(DeltaTime),a	;H
+
+	ld	hl,(DeltaSecs)
+	ld	de,3600
+	call	lmod		;HL=DeltaSecs modulo 3600
+	push	hl
+	ld	de,60
+	call	ldiv		;HL=(DeltaSecs modulo 3600)/60
+	ld	a,l
+	ld	(DeltaTime+1),a	;M
+
+	pop	hl
+	ld	de,60
+	call	lmod		;HL = (DeltaSecs modulo 3600) modulo 60
+	ld	a,l
+	ld	(DeltaTime+2),a	;S
+				;convert DeltaTime to ASCII
+				;and store-it to TimeLapse
+	ld	hl,DeltaTime
+	ld	bc,TimeLapse
+				;HH:
+	ld	a,(hl)
+	inc	hl
+	ld	d,a
+	xor	a
+	ld	e,10
+	call	DIVIDE		;inputs hi=A lo=D, divide by E
+				;   output D, remainder in A
+	ld	e,a
+	ld	a,30H
+	add	a,d
+	ld	(bc),a
+	inc	bc
+	ld	a,30H
+	add	a,e
+	ld	(bc),a
+	inc	bc
+	ld	a,':'
+	ld	(bc),a
+	inc	bc
+				;MM:
+	ld	a,(hl)
+	inc	hl
+	ld	d,a
+	xor	a
+	ld	e,10
+	call	DIVIDE		;inputs hi=A lo=D, divide by E
+				;   output D, remainder in A
+	ld	e,a
+	ld	a,30H
+	add	a,d
+	ld	(bc),a
+	inc	bc
+	ld	a,30H
+	add	a,e
+	ld	(bc),a
+	inc	bc
+	ld	a,':'
+	ld	(bc),a
+	inc	bc
+				;SS
+	ld	a,(hl)
+	ld	d,a
+	xor	a
+	ld	e,10
+	call	DIVIDE		;inputs hi=A lo=D, divide by E
+				;   output D, remainder in A
+	ld	e,a
+	ld	a,30H
+	add	a,d
+	ld	(bc),a
+	inc	bc
+	ld	a,30H
+	add	a,e
+	ld	(bc),a
+
+	ret
+;
+;	Get current time, store-it in StartTime
+;
+GetStartTime:
+	call	GetTime		;E = seconds
+				;D = minutes
+				;L = hours
+				;H = 0
+	ld	a,l
+	ld	hl,StartTime
+	ld	(hl),a		;H
+	inc	hl
+	ld	(hl),d		;M
+	inc	hl
+	ld	(hl),e		;S
+	ret
+;
+;	Get current time, store-it in StopTime
+;
+GetStopTime:
+	call	GetTime		;E = seconds
+				;D = minutes
+				;L = hours
+				;H = 0
+	ld	a,l
+	ld	hl,StopTime
+	ld	(hl),a		;H
+	inc	hl
+	ld	(hl),d		;M
+	inc	hl
+	ld	(hl),e		;S
+	ret
+;
+;	Print (StopTime - StartTime)
+;
+PrintLapseTime:
+	call	ComputeLapse
+	ld	de,TimeLapse
+	jp	show_string_de
 ;
 ;********************************************************************
 ;
@@ -5267,5 +5611,4 @@ RTC_WR_PROTECT:
 	CALL	RTC_WRITE
 	RET
 ;
-
                                
