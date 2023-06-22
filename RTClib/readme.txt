@@ -17,3 +17,5 @@ void	PrintLapseTime(void);	/* writes (StopTime - StartTime) as HH:MM:SS */
 				/* at the current cursor position on screen */
 
 Use ZAS (Z80AS) to assemble the library
+
+These routines were used in Tetris & Chess
