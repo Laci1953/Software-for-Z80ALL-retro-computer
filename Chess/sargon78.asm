@@ -2089,15 +2089,12 @@ KERNEL  EQU     0F0H ; $-BLBASE
 ; STANDARD MESSAGES
 ;*******************************************************
         ORG     START+1800H
-HELP:	 DB	13,10,13,10
-	 DB	 "when moving a piece (e.g. e2-e4) hit ctrl^r to quit the game"
-	 DB	 0dh,0ah,'$'
-GRTTNG:  DB      "Welcome to sargon chess! Care for a game (n to quit) ?$"
+GRTTNG:  DB      "welcome to sargon chess! care for a game (n to quit) ?$"
 ANAMSG:  DB      "WOULD YOU LIKE TO ANALYZE A POSITION?"
-CLRMSG:  DB      "do you want to play white(w) or black(b)?"
+CLRMSG:  DB	 "do you want to play white(w) or black(b)?"
 TITLE1:  DB      "sargon"
 TITLE2:  DB      "player"
-SPACE:   DB      "                   "    ; For output of blank area
+SPACE:   DB      "              "    ; For output of blank area
 MVENUM:  DB      "01 "
 TITLE3:  DB      "  ====== ======"
 MVEMSG:  DB      "a1-a1"
@@ -2251,7 +2248,13 @@ DRIVER: LD      sp,STACK        ; Set stack pointer
 	call	Load_1_to_26	; Load new fonts
 	call	Load_64_to_89
 
-	jp	GO
+        SUB     a               ; Code of White is zero
+        LD      (COLOR),a       ; White always moves first
+
+	ld	de,HELP		; Output help
+	call	show_string_de
+
+	jr	GO
 
 DRIV01: 
 	CALL    CHARTR          ; Accept answer
@@ -2261,18 +2264,32 @@ DRIV01:
 	EXIT
 ;       JP      Z,ANALYS        ; If so then jump to ANALYSing a position
 GO:
-        SUB     a               ; Code of White is zero
-        LD      (COLOR),a       ; White always moves first
 
-	ld	de,HELP		; Output help
+	ld	de,LoadGameMsg	; Ask 'load saved game?'
 	call	show_string_de
 
-        CALL    INTERR          ; Players color/search depth
+        CALL    CHARTR          ; Accept response
+	cp	'Y'
+	jr	nz,dontload
+loadgame:				; Load a saved game...
+	ld	de,GameNrMsg	; Ask 'game nr'
+	call	show_string_de
 
-        call    CrtClear	; Clear screen
-	call	InitRTC		; Initialize real time clock
+        CALL    CHARTR          ; Accept response
+	cp	'0'
+	jr	nc,ok1
+errnr:
+	ld	de,WrongNumber
+	call	show_string_de
+	jr	loadgame
+ok1:
+	cp	'9'+1
+	jr	nc,errnr
 
-        CALL    INITBD          ; Initialize board array
+	call	LoadGame
+	call	CrtClear
+	jr	2f
+dontload:
         LD      a,1             ; Move number is 1 at at start
         LD      (MOVENO),a      ; Save
         LD      (LINECT),a      ; Line number is one at start
@@ -2282,6 +2299,15 @@ GO:
         LD      (hl),31H
         INC     hl
         LD      (hl),20H
+        CARRET                  ; New line
+
+        CALL    INTERR          ; Players color/search depth
+
+        call    CrtClear	; Clear screen
+	
+        CALL    INITBD          ; Initialize board array
+2:
+	call	InitRTC		; Initialize real time clock
         CALL    DSPBRD          ; Set up graphics board
         PRTLIN  TITLE4,15       ; Put up player headings
         PRTLIN  TITLE3,15
@@ -2289,17 +2315,27 @@ DRIV04:
 	PRTBLK  MVENUM,3        ; Display move number
         LD      a,(KOLOR)       ; Bring in computer's color
         AND     a               ; Is it white ?
-        JR      NZ,DR08         ; No - jump
+        JP      NZ,DR08         ; No - jump
 
         CALL    PGIFND          ; New page if needed
         CP      1               ; Was page turned ?
         CALL    Z,TBCPCL        ; Yes - Tab to computers column
 
+	ld	hl,LoadFlag	;check if game was loaded
+	ld	a,(hl)
+	ld	(hl),0
+	or	a
+	jr	z,domove
+				;if yes, skip computer's move
+	PRTBLK	SPACE,14
+	jr	skip
+domove:
 	call	GetStartTime
         CALL    CPTRMV          ; Make and write computers move
 	call	GetStopTime
         PRTBLK  SPACE,1         ; Output a space
 	call	PrintLapseTime
+skip:
         PRTBLK  SPACE,1         ; Output a space
 
 	call	GetStartTime
@@ -2554,7 +2590,7 @@ TBPLCL: PRTBLK  MVENUM,3        ; Reproduce move number
         LD      a,(KOLOR)       ; Computers color
         AND     a             ; Is computer white ?
         RET     NZ              ; No - return
-        PRTBLK  SPACE,15         ; Tab to next column
+        PRTBLK  SPACE,6         ; Tab to next column
         RET                     ; Return
 
 ;***********************************************************
@@ -2578,7 +2614,7 @@ TBCPCL: PRTBLK  MVENUM,3        ; Reproduce move number
         LD      a,(KOLOR)       ; Computer's color
         AND     a             ; Is computer white ?
         RET     Z               ; Yes - return
-        PRTBLK  SPACE,15        ; Tab to next column
+        PRTBLK  SPACE,6        ; Tab to next column
         RET                     ; Return
 
 ;***********************************************************
@@ -2657,6 +2693,8 @@ BITASN: SUB     a             ; Get ready for division
 ; ARGUMENTS:  --  None
 ;***********************************************************
 PLYRMV: CALL    CHARTR          ; Accept "from" file letter
+	cp	13H		; Is it CTRL^S ?
+	jp	z,SaveGame
         CP      12H             ; Is it instead a Control-R ?
         JP      Z,FM09          ; Yes - jump
         LD      h,a             ; Save
@@ -2901,135 +2939,6 @@ MA08:   LD      (BRDPOS),a      ; Store King position
         call    blink_square
 
         RET                     ; Return
-
-;***********************************************************
-; SET UP POSITION FOR ANALYSIS
-;***********************************************************
-; FUNCTION:   --  To enable user to set up any position
-;                 for analysis, or to continue to play
-;                 the game. The routine blinks the board
-;                 squares in turn and the user has the option
-;                 of leaving the contents unchanged by a
-;                 carriage return, emptying the square by a 0,
-;                 or inputting a piece of his chosing. To
-;                 enter a piece, type in piece-code,color-code,
-;                 moved-code.
-;
-;                 Piece-code is a letter indicating the
-;                 desired piece:
-;                       K  -  King
-;                       Q  -  Queen
-;                       R  -  Rook
-;                       B  -  Bishop
-;                       N  -  Knight
-;                       P  -  Pawn
-;
-;                 Color code is a letter, W for white, or B for
-;                 black.
-;
-;                 Moved-code is a number. 0 indicates the piece has never
-;                 moved. 1 indicates the piece has moved.
-;
-;                 A backspace will back up in the sequence of blinked
-;                 squares. An Escape will terminate the blink cycle and
-;                 verify that the position is correct, then procede
-;                 with game initialization.
-;
-; CALLED BY:  --  DRIVER
-;
-; CALLS:      --  CHARTR
-;                 DPSBRD
-;                 BLNKER
-;                 ROYALT
-;                 PLYRMV
-;                 CPTRMV
-;
-; MACRO CALLS:    PRTLIN
-;                 EXIT
-;                 CrtClear
-;                 PRTBLK
-;                 CARRET
-;
-; ARGUMENTS:  --  None
-;***********************************************************
-ANALYS: PRTLIN  ANAMSG,37       ; "CARE TO ANALYSE A POSITION?"
-        CALL    CHARTR          ; Accept answer
-        CARRET                  ; New line
-        CP      4EH           ; Is answer a "N" ?
-        JR      NZ,AN04         ; No - jump
-        EXIT                    ; Return to monitor
-AN04:   CALL    DSPBRD          ; Current board position
-        LD      a,21            ; First board index
-AN08:   LD      (ANBDPS),a      ; Save
-        LD      (BRDPOS),a
-        CALL    CONVRT          ; Norm address into HL register
-        LD      (M1),a          ; Set up board index
-        LD      ix,(M1)
-        LD      a,(ix+BOARD)    ; Get board contents
-        CP      0FFH            ; Border square ?
-        JR      Z,AN19          ; Yes - jump
-
-        call    blink_square
-
-        CALL    CHARTR          ; Accept input
-        CP      1BH             ; Is it an escape ?
-        JR      Z,AN1B          ; Yes - jump
-        CP      08H             ; Is it a backspace ?
-        JR      Z,AN1A          ; Yes - jump
-        CP      0DH             ; Is it a carriage return ?
-        JR      Z,AN19          ; Yes - jump
-        LD      bc,7            ; Number of types of pieces + 1
-        LD      hl,PCS          ; Address of piece symbol table
-        CPIR                    ; Search
-        JR      NZ,AN18         ; Jump if not found
-        CALL    CHARTR          ; Accept and ignore separator
-        CALL    CHARTR          ; Color of piece
-        CP      42H             ; Is it black ?
-        JR      NZ,rel022       ; No - skip
-        SET     7,c             ; Black piece indicator
-rel022: CALL    CHARTR          ; Accept and ignore separator
-        CALL    CHARTR          ; Moved flag
-        CP      31H             ; Has piece moved ?
-        JR      NZ,AN18         ; No - jump
-        SET     3,c             ; Set moved indicator
-AN18:   LD      (ix+BOARD),c    ; Insert piece into board array
-        CALL    DSPBRD          ; Update graphics board
-AN19:   LD      a,(ANBDPS)      ; Current board position
-        INC     a               ; Next
-        CP      99            ; Done ?
-        JR      NZ,AN08         ; No - jump
-        JR      AN04            ; Jump
-AN1A:   LD      a,(ANBDPS)      ; Prepare to go back a square
-        SUB     3             ; To get around border
-        CP      20            ; Off the other end ?
-        JP      NC,AN08         ; No - jump
-        LD      a,98            ; Wrap around to top of screen
-AN0B:   JP      AN08            ; Jump
-AN1B:   PRTLIN  CRTNES,14       ; Ask if correct
-        CALL    CHARTR          ; Accept answer
-        CP      4EH           ; Is it "N" ?
-        JP      Z,AN04          ; No - jump
-        CALL    ROYALT          ; Update positions of royalty
-        call    CrtClear                  ; Blank screen
-        CALL    INTERR          ; Accept color choice
-AN1C:   PRTLIN  WSMOVE,17       ; Ask whose move it is
-        CALL    CHARTR          ; Accept response
-        CALL    DSPBRD          ; Display graphics board
-        PRTLIN  TITLE4,15       ; Put up titles
-        PRTLIN  TITLE3,15
-        CP      57H           ; Is is whites move ?
-        JP      Z,DRIV04        ; Yes - jump
-        PRTBLK  MVENUM,3        ; Print move number
-        PRTBLK  SPACE,6         ; Tab to blacks column
-        LD      a,(KOLOR)       ; Computer's color
-        AND     a             ; Is computer white ?
-        JR      NZ,AN20         ; No - jump
-        CALL    PLYRMV          ; Get players move
-        CARRET                  ; New line
-        JP      DR0C            ; Jump
-AN20:   CALL    CPTRMV          ; Get computers move
-        CARRET                  ; New line
-        JP      DR0C            ; Jump
 
 ;***********************************************************
 ; UPDATE POSITIONS OF ROYALTY
@@ -3874,16 +3783,248 @@ copyright_message:
     db '#+#   #+# #+#    #+# #+#    #+# #+#   #+# #+#   #+# #+#   #+#+#',13,10
     db ' #######  ###    ### ###    ###  #######   #######  ###    ####',13,10
     db 13,10
-    db 'Sargon is a computer chess playing program designed and coded',13,10
-    db 'by Dan and Kathe Spracklen. Copyright 1978. All rights reserved.',13,10 
-    db 'No part of this publication may be reproduced',13,10
+    db 'sargon is a computer chess playing program designed and coded',13,10
+    db 'by dan and kathe spracklen. copyright 1978. all rights reserved.',13,10 
+    db 'no part of this publication may be reproduced',13,10
     db '     without prior written permission.',13,10,13,10
-    db 'This version was ported to CP/M by John Squires in May 2021',13,10
-    db 'for the Z80 Playground. It is based on the listing found at',13,10
+    db 'this version was ported to cp/m by john squires in may 2021',13,10
+    db 'for the z80 playground. it is based on the listing found at',13,10
     db 'github.com/billforsternz/retro-sargon.',13,10
     db 13,10
-    db 'Adapted to Z80ALL by Ladislau Szilagyi in June 2023',13,10,13,10
+    db 'adapted to z80all by ladislau szilagyi in june 2023',13,10,13,10
     db '$'
+;
+HELP:	 DB	13,10
+	 DB	"ctrl^r to quit the game or ctrl^s to save the game"
+	 DB	13,10,'$'
+;
+;----------------------------------------------
+;
+; Saved games file structure (one 128 bytes record)
+;
+;kolor:	(KOLOR)		1 byte
+;depth:	(PLYMAX) 	1 byte	
+;moveno:(MOVENO)	1 byte
+;board:	(BOARDA) 	120 bytes
+;dummy			5 bytes
+;
+;----------------------------------------------
+
+Record:				;128 bytes buffer used at load/save game
+kolor:	defs	1
+depth:	defs	1
+moveno:	defs	1
+board:	defs	120
+	defs	5
+
+fcb:				; fcb
+	defb	0		; disk+1
+fname:	defm	"SARGON  SV "   ; file name
+	defb	0		; EX=0
+	defb	0,0		; S1,S2
+	defb	0		; RC=0
+	defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0	; D0,...D15
+fcbcr:	defb	0		; CR=0
+	defb	0,0,0		; R0,R1,R2
+
+CannotWrite:
+	defb	0DH,0AH
+	defm	'could not write!$'
+CannotOpen:
+	defb	0DH,0AH
+	defm	'could not found saved game!$'
+CannotRead:
+	defb	0DH,0AH
+	defm	'could not read saved game!$'
+LoadGameMsg:
+	defb	0DH,0AH
+	defm	'load saved game? (y=yes):$'
+SaveMsg:defm	'saving game...$'
+GameNrMsg:
+	defb	0DH,0AH
+	defm	'game number (0...9):$'
+GameSaved:
+	defb	0DH,0AH
+	defm	'game saved!$'
+WrongNumber:
+	defb	0DH,0AH
+	defm	'it must be a single decimal digit!$'
+;
+LoadFlag:defb	0
+;
+;	A = game number (1...9 in ASCII)
+;
+LoadGame:
+	ld	(fname+10),a	; Store game # as final ext char
+
+	ld	de,fcb		; open file
+	ld	c,15
+	call	BDOS
+	inc	a
+	jr	nz,1f
+
+	ld	de,CannotOpen	; file not found
+	call	show_string_de
+	jp	0		; quit
+1:
+	ld	de,Record	; set DMA addr
+	ld	c,26
+	call	BDOS
+
+	xor	a		; prepare fcb
+	ld	(fcbcr),a
+
+	ld	de,fcb		; read record		
+	ld	c,20
+	call	BDOS
+	or	a
+	jr	z,1f
+
+	ld	de,CannotRead	; read failed
+	call	show_string_de
+	jp	0		; quit
+1:
+	ld	de,fcb		; close file
+	ld	c,16
+	call	BDOS
+				; store game info
+	ld	a,(kolor)
+	ld	(KOLOR),a
+
+	ld	a,(depth)
+	ld	(PLYMAX),a
+
+	ld	a,(moveno)
+	ld	(MOVENO),a
+				;store to MVENUM A in ASCII decimal
+	ld	hl,MVENUM
+
+	ld	d,a
+	ld	a,0
+	ld	e,10
+	call	DIVIDE
+	ld	e,a		;remainder
+	ld	a,d
+	add	a,'0'
+	ld	(hl),a
+
+	inc	hl
+	
+	ld	a,e
+	add	a,'0'
+	ld	(hl),a
+
+	inc	hl
+	ld	(hl),' '
+
+	ld	de,BOARDA	;to
+	ld	hl,board	;from
+	ld	bc,120		;count
+	ldir
+				;setup titles
+	ld	a,(KOLOR)
+	or	a
+	jr	nz,1f
+         	                ; Set computers color to white
+        LD      hl,TITLE1       ; Prepare move list titles
+        LD      de,TITLE4+2
+        LD      bc,6
+        LDIR
+        LD      hl,TITLE2
+        LD      de,TITLE4+9
+        LD      bc,6
+        LDIR
+	
+	jr	2f
+1:			        ; Set computers color to black
+        LD      hl,TITLE2       ; Prepare move list titles
+        LD      de,TITLE4+2
+        LD      bc,6
+        LDIR
+        LD      hl,TITLE1
+        LD      de,TITLE4+9
+        LD      bc,6
+        LDIR
+2:
+	ld	a,1
+	ld	(LoadFlag),a	;mark "game was loaded"
+
+	ret
+;
+SaveGame:
+	ld	de,SaveMsg
+	call	show_string_de
+savegame:
+	ld	de,GameNrMsg	; Ask 'game nr'
+	call	show_string_de
+
+        CALL    CHARTR          ; Accept response
+	cp	'0'
+	jr	nc,2f
+1:
+	ld	de,WrongNumber
+	call	show_string_de
+	jr	savegame
+2:
+	cp	'9'+1
+	jr	nc,1b
+
+	ld	(fname+10),a	; Store game # as final ext char
+				; store game info
+	ld	a,(KOLOR)
+	ld	(kolor),a
+
+	ld	a,(PLYMAX)
+	ld	(depth),a
+
+	ld	a,(MOVENO)
+	ld	(moveno),a
+
+	ld	hl,BOARDA	;from
+	ld	de,board	;to
+	ld	bc,120		;count
+	ldir
+
+	ld	de,fcb		; delete file (if any...)
+	ld	c,19
+	call	BDOS
+
+	ld	de,fcb		; make file
+	ld	c,22
+	call	BDOS
+
+	inc	a
+	jr	nz,1f
+
+	ld	de,CannotWrite	; disk directory full
+	call	show_string_de
+	jp	0		; quit
+1:
+	ld	de,Record	; set DMA addr
+	ld	c,26
+	call	BDOS
+
+	xor	a		; prepare fcb
+	ld	(fcbcr),a
+
+	ld	de,fcb		; write record		
+	ld	c,21
+	call	BDOS
+	or	a
+	jr	z,1f
+
+	ld	de,CannotWrite	; write failed
+	call	show_string_de
+	jp	0		; quit
+1:
+	ld	de,fcb		; close file
+	ld	c,16
+	call	BDOS
+
+	ld	de,GameSaved
+	call	show_string_de
+
+	jp	0		; quit
 ;
 ;********************************************************************
 ;	Time lapse computing
