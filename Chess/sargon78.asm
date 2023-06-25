@@ -3998,7 +3998,7 @@ savegame:
 
 	ld	de,CannotWrite	; disk directory full
 	call	show_string_de
-	jp	0		; quit
+	EXIT			; quit
 1:
 	ld	de,Record	; set DMA addr
 	ld	c,26
@@ -4015,7 +4015,7 @@ savegame:
 
 	ld	de,CannotWrite	; write failed
 	call	show_string_de
-	jp	0		; quit
+	EXIT			; quit
 1:
 	ld	de,fcb		; close file
 	ld	c,16
@@ -4024,7 +4024,7 @@ savegame:
 	ld	de,GameSaved
 	call	show_string_de
 
-	jp	0		; quit
+	EXIT			; quit
 ;
 ;********************************************************************
 ;	Time lapse computing
