@@ -2225,37 +2225,35 @@ LINECT:  DB      0               ; Current line number
         ORG     START+1A00H     ; Above the move logic
 
 DRIVER: LD      sp,STACK        ; Set stack pointer
-
+	xor	a		; set (time) = 0
+	ld	(time),a
+	ld	h,a
+	ld	l,a
+	ld	(time+1),hl
         call    CrtClear        ; Blank out screen
-
 	ld	de,copyright_message
 	call	show_string_de
-
 	ld	de,GRTTNG	; Output greeting
 	call	show_string_de
-
 	ld	c,BDOS_Console_Input
 	call	BDOS
 	and	5FH
         CP      'N'             ; Is it a 'N' ?
 	jp	z,0		; If yes, quit
 
+
 	call    CrtClear
-
-	call	Save_1_to_26	; Save old fonts			
-	call	Save_64_to_89
-	
-	call	Load_1_to_26	; Load new fonts
-	call	Load_64_to_89
-
         SUB     a               ; Code of White is zero
         LD      (COLOR),a       ; White always moves first
-
 	ld	de,HELP		; Output help
 	call	show_string_de
 
-	jr	GO
+	call	Save_1_to_26	; Save old fonts			
+	call	Save_64_to_89
+	call	Load_1_to_26	; Load new fonts
+	call	Load_64_to_89
 
+	jr	GO
 DRIV01: 
 	CALL    CHARTR          ; Accept answer
         CARRET                  ; New line
@@ -2264,18 +2262,18 @@ DRIV01:
 	EXIT
 ;       JP      Z,ANALYS        ; If so then jump to ANALYSing a position
 GO:
-
 	ld	de,LoadGameMsg	; Ask 'load saved game?'
 	call	show_string_de
-
-        CALL    CHARTR          ; Accept response
+	ld	c,BDOS_Console_Input
+	call	BDOS
+	and	5FH
 	cp	'Y'
 	jr	nz,dontload
 loadgame:				; Load a saved game...
 	ld	de,GameNrMsg	; Ask 'game nr'
 	call	show_string_de
-
-        CALL    CHARTR          ; Accept response
+	ld	c,BDOS_Console_Input
+	call	BDOS
 	cp	'0'
 	jr	nc,ok1
 errnr:
@@ -2285,11 +2283,12 @@ errnr:
 ok1:
 	cp	'9'+1
 	jr	nc,errnr
-
 	call	LoadGame
 	call	CrtClear
-	jr	2f
+	call	InitRTC		; Initialize real time clock to (date = 1,1,1) & (time)
+	jr	display_board
 dontload:
+	call	InitRTC		; Initialize real time clock to (date = 1,1,1) & (time)
         LD      a,1             ; Move number is 1 at at start
         LD      (MOVENO),a      ; Save
         LD      (LINECT),a      ; Line number is one at start
@@ -2300,14 +2299,10 @@ dontload:
         INC     hl
         LD      (hl),20H
         CARRET                  ; New line
-
         CALL    INTERR          ; Players color/search depth
-
         call    CrtClear	; Clear screen
-	
         CALL    INITBD          ; Initialize board array
-2:
-	call	InitRTC		; Initialize real time clock
+display_board:
         CALL    DSPBRD          ; Set up graphics board
         PRTLIN  TITLE4,15       ; Put up player headings
         PRTLIN  TITLE3,15
@@ -2316,11 +2311,9 @@ DRIV04:
         LD      a,(KOLOR)       ; Bring in computer's color
         AND     a               ; Is it white ?
         JP      NZ,DR08         ; No - jump
-
         CALL    PGIFND          ; New page if needed
         CP      1               ; Was page turned ?
         CALL    Z,TBCPCL        ; Yes - Tab to computers column
-
 	ld	hl,LoadFlag	;check if game was loaded
 	ld	a,(hl)
 	ld	(hl),0
@@ -2337,14 +2330,12 @@ domove:
 	call	PrintLapseTime
 skip:
         PRTBLK  SPACE,1         ; Output a space
-
 	call	GetStartTime
         CALL    PLYRMV          ; Accept and make players move
 	call	GetStopTime
         PRTBLK  SPACE,1         ; Output a space
 	call	PrintLapseTime
         CARRET                  ; New line
-
         JR      DR0C            ; Jump
 DR08:   
 	call	GetStartTime
@@ -2353,18 +2344,15 @@ DR08:
         PRTBLK  SPACE,1         ; Output a space
 	call	PrintLapseTime
         PRTBLK  SPACE,1         ; Output a space
-
         CALL    PGIFND          ; New page if needed
         CP      1               ; Was page turned ?
         CALL    Z,TBCPCL        ; Yes - Tab to computers column
-
 	call	GetStartTime
         CALL    CPTRMV          ; Make and write computers move
 	call	GetStopTime
         PRTBLK  SPACE,1         ; Output a space
 	call	PrintLapseTime
         CARRET                  ; New line
-
 DR0C:   LD      hl,MVENUM+2     ; Addr of 3rd char of move
         LD      a,20H           ; Ascii space
         CP      (hl)          ; Is char a space ?
@@ -2556,8 +2544,19 @@ FM04:   PRTLIN  MTMSG,4         ; Output "MATE"
         PRTLIN  IWIN,5          ; Output "I WIN"
 FM08:   POP     hl              ; Remove return addresses
         POP     hl
+
+	call	StoreTime		;(time) = current time
+	call	TimeToASCII		;(time) ---> (TimeASCII)
+
+	ld	de,TotalMatchTime
+	call	show_string_de
+	ld	de,TimeASCII
+	call	show_string_de
+	ld	de,HitAnyKey
+	call	show_string_de
+
         CALL    CHARTR          ; Input any char to play again
-FM09:   call CrtClear                  ; Blank screen
+FM09:   call 	CrtClear                  ; Blank screen
 	ld	de,AGAIN
 	call	show_string_de	; "CARE FOR ANOTHER GAME?"
         JP      DRIV01          ; Jump (Rest of game init)
@@ -3783,20 +3782,26 @@ copyright_message:
     db '#+#   #+# #+#    #+# #+#    #+# #+#   #+# #+#   #+# #+#   #+#+#',13,10
     db ' #######  ###    ### ###    ###  #######   #######  ###    ####',13,10
     db 13,10
-    db 'sargon is a computer chess playing program designed and coded',13,10
-    db 'by dan and kathe spracklen. copyright 1978. all rights reserved.',13,10 
-    db 'no part of this publication may be reproduced',13,10
+    db 'Sargon is a computer chess playing program designed and coded',13,10
+    db 'by Dan and Kathe Spracklen. Copyright 1978. All rights reserved.',13,10 
+    db 'No part of this publication may be reproduced',13,10
     db '     without prior written permission.',13,10,13,10
-    db 'this version was ported to cp/m by john squires in may 2021',13,10
-    db 'for the z80 playground. it is based on the listing found at',13,10
+    db 'This version was ported to CP/M by John Squires in May 2021',13,10
+    db 'for the Z80 Playground. It is based on the listing found at',13,10
     db 'github.com/billforsternz/retro-sargon.',13,10
     db 13,10
-    db 'adapted to z80all by ladislau szilagyi in june 2023',13,10,13,10
+    db 'Adapted to Z80ALL by Ladislau Szilagyi in June 2023',13,10,13,10
     db '$'
 ;
 HELP:	 DB	13,10
 	 DB	"ctrl^r to quit the game or ctrl^s to save the game"
 	 DB	13,10,'$'
+TotalMatchTime:
+	db	13,10
+	defm	'total match duration = $'
+HitAnyKey:
+	db	13,10
+	defm	'hit any key to continue...$'
 ;
 ;----------------------------------------------
 ;
@@ -3805,8 +3810,9 @@ HELP:	 DB	13,10
 ;kolor:	(KOLOR)		1 byte
 ;depth:	(PLYMAX) 	1 byte	
 ;moveno:(MOVENO)	1 byte
+;time:			3 bytes (H,M,S)
 ;board:	(BOARDA) 	120 bytes
-;dummy			5 bytes
+;dummy			2 bytes
 ;
 ;----------------------------------------------
 
@@ -3814,8 +3820,9 @@ Record:				;128 bytes buffer used at load/save game
 kolor:	defs	1
 depth:	defs	1
 moveno:	defs	1
+time:	defs	3		;accumulated match time (S,M,H)
 board:	defs	120
-	defs	5
+	defs	2
 
 fcb:				; fcb
 	defb	0		; disk+1
@@ -3887,6 +3894,50 @@ LoadGame:
 	ld	de,fcb		; close file
 	ld	c,16
 	call	BDOS
+				; (time) contains now the cumulated match time
+				; translate the bytes into decimal ASCII
+	ld	hl,time
+
+	ld	a,(hl)
+	ld	d,a
+	xor	a		;high=0,low=D
+	ld	e,10
+	call	DIVIDE		; /E --> D remainder in A
+	sla	d
+	sla	d
+	sla	d
+	sla	d
+	or	a
+	ld	(hl),a
+
+	inc	hl
+
+	ld	a,(hl)
+	ld	d,a
+	xor	a		;high=0,low=D
+	ld	e,10
+	call	DIVIDE		; /E --> D remainder in A
+	sla	d
+	sla	d
+	sla	d
+	sla	d
+	or	a
+	ld	(hl),a
+
+	inc	hl
+
+	ld	a,(hl)
+	ld	d,a
+	xor	a		;high=0,low=D
+	ld	e,10
+	call	DIVIDE		; /E --> D remainder in A
+	sla	d
+	sla	d
+	sla	d
+	sla	d
+	or	a
+	ld	(hl),a
+				; it will be displayed at the next InitRTC call
 				; store game info
 	ld	a,(kolor)
 	ld	(KOLOR),a
@@ -3980,6 +4031,8 @@ savegame:
 	ld	a,(MOVENO)
 	ld	(moveno),a
 
+	call	StoreTime	;get current time in (time)
+
 	ld	hl,BOARDA	;from
 	ld	de,board	;to
 	ld	bc,120		;count
@@ -4021,6 +4074,8 @@ savegame:
 	ld	c,16
 	call	BDOS
 
+        call    CrtClear        ; Blank out screen
+
 	ld	de,GameSaved
 	call	show_string_de
 
@@ -4037,7 +4092,7 @@ StartSecs:	defs	2
 StopSecs:	defs	2
 DeltaSecs:	defs	2
 ;
-TimeLapse:	defs	8	;00:00:00 using ASCII decimal digits
+TimeASCII:	defs	8	;00:00:00 using ASCII decimal digits
 		defb	'$'
 
 ;**************************************************************************
@@ -4168,7 +4223,7 @@ mult8b:
 ;
 ;	Computes DeltaTime = StopTime - StartTime
 ;	convert-it to ASCII 
-;	and store-it to TimeLapse
+;	and store-it to TimeASCII
 ;
 ComputeLapse:
 				;compute StartSecs
@@ -4245,9 +4300,9 @@ ComputeLapse:
 	ld	a,l
 	ld	(DeltaTime+2),a	;S
 				;convert DeltaTime to ASCII
-				;and store-it to TimeLapse
+				;and store-it to TimeASCII
 	ld	hl,DeltaTime
-	ld	bc,TimeLapse
+	ld	bc,TimeASCII
 				;HH:
 	ld	a,(hl)
 	inc	hl
@@ -4342,7 +4397,7 @@ GetStopTime:
 ;
 PrintLapseTime:
 	call	ComputeLapse
-	ld	de,TimeLapse
+	ld	de,TimeASCII
 	jp	show_string_de
 ;
 ;********************************************************************
@@ -5288,10 +5343,83 @@ mask_rst	EQU	00010000B	; De-activate RTC reset line
 ;
 RTC		EQU	0C0H		; RTC port for Z80ALL
 ;
+;	(time) ---> (TimeASCII)
+;
+TimeToASCII:
+	ld	hl,TimeASCII
+
+	ld	a,(time+2)		;H
+	ld	d,a
+	xor	a
+	ld	e,10
+	call	DIVIDE			;inputs hi=A lo=D, divide by E
+					;   output D, remainder in A
+	ld	e,a
+	ld	a,30H
+	add	a,d
+	ld	(hl),a
+	inc	hl
+	ld	a,30H
+	add	a,e
+	ld	(hl),a
+	inc	hl
+	ld	a,':'
+	ld	(hl),a
+	inc	hl
+
+	ld	a,(time+1)		;M
+	ld	d,a
+	xor	a
+	ld	e,10
+	call	DIVIDE			;inputs hi=A lo=D, divide by E
+					;   output D, remainder in A
+	ld	e,a
+	ld	a,30H
+	add	a,d
+	ld	(hl),a
+	inc	hl
+	ld	a,30H
+	add	a,e
+	ld	(hl),a
+	inc	hl
+	ld	a,':'
+	ld	(hl),a
+	inc	hl
+
+	ld	a,(time)		;S
+	ld	d,a
+	xor	a
+	ld	e,10
+	call	DIVIDE			;inputs hi=A lo=D, divide by E
+					;   output D, remainder in A
+	ld	e,a
+	ld	a,30H
+	add	a,d
+	ld	(hl),a
+	inc	hl
+	ld	a,30H
+	add	a,e
+	ld	(hl),a
+
+	ret
+;
+;	Store current time in (time)
+;
+StoreTime:
+	call	GetTime		;returns E = seconds, D = minutes, L = hours
+	ld	a,l		;A=hours
+	ld	hl,time
+	ld	(hl),e		;store seconds
+	inc	hl
+	ld	(hl),d		;store minutes
+	inc	hl
+	ld	(hl),a		;store hours
+	ret
+;
 ;void	InitRTC(void)
 ;
-;	Resets time to 01-01-01 00:00:00
-;	Writes 00:00:00 to the top-right corner of the screen
+;	Resets time to 01-01-01 (time)
+;	Writes (time) to the top-right corner of the screen
 ;
 InitRTC:
 	CALL	ResetON
@@ -5303,17 +5431,17 @@ InitRTC:
 	CALL RTC_WR_UNPROTECT
 ; seconds
 	LD	D,00H
-	LD	A,0
+	LD	A,(time)
 	LD	E,A
 	CALL RTC_WRITE
 ; minutes
 	LD	D,01H
-	LD	A,0
+	LD	A,(time+1)
 	LD	E,A
 	CALL RTC_WRITE
 ; hours
 	LD	D,02H
-	LD	A,0
+	LD	A,(time+2)
 	LD	E,A
 	CALL RTC_WRITE
 ; date
@@ -5343,28 +5471,17 @@ InitRTC:
 	LD	E,00H
 	CALL RTC_WRITE
 	CALL RTC_WR_PROTECT
-					;write 00:00:00
-	LD	BC,3800H		;LINE 0, COL 56
-	LD	A,'0'
-	OUT	(C),A
-	INC	B
-	OUT	(C),A
-	INC	B
-	LD	A,':'
-	OUT	(C),A
-	INC	B
-	LD	A,'0'
-	OUT	(C),A
-	INC	B
-	OUT	(C),A
-	INC	B
-	LD	A,':'
-	OUT	(C),A
-	INC	B
-	LD	A,'0'
-	OUT	(C),A
-	INC	B
-	OUT	(C),A
+					;write (time) at LINE 0, COL 56
+	call	TimeToASCII
+
+	ld	hl,TimeASCII
+	ld	bc,3800H
+
+	rept	8
+	ld	a,(hl)
+	out	(c),a
+	inc	b
+	endm
 
 	RET
 ;
@@ -5510,9 +5627,9 @@ GetTime:
 Delay:
 	PUSH	AF			; 11 t-states
 	LD	A,7			; 7 t-states ADJUST THE TIME 13h IS FOR 4 MHZ
-RTC_BIT_DELAY1:
+1:
 	DEC	A			; 4 t-states DEC COUNTER. 4 T-states = 1 uS.
-	JP	NZ,RTC_BIT_DELAY1	; 10 t-states JUMP TO PAUSELOOP2 IF A <> 0.
+	JP	NZ,1b			; 10 t-states JUMP TO PAUSELOOP2 IF A <> 0.
 
 	NOP				; 4 t-states
 	NOP				; 4 t-states
@@ -5521,14 +5638,15 @@ RTC_BIT_DELAY1:
 ;
 ResetON:
 	LD	A,mask_data + mask_rd
-OutDelay:
 	OUT	(RTC),A
 	CALL	Delay
 	JR	Delay
 ;
 ResetOFF:
 	LD	A,mask_data + mask_rd + mask_rst
-	JR	OutDelay
+	OUT	(RTC),A
+	CALL	Delay
+	JR	Delay
 ;
 ; function RTC_WR
 ; input value in C
@@ -5555,12 +5673,11 @@ ResetOFF:
 
 RTC_WR:
 	XOR	A			; set A=0 index counter of FOR loop
-
-RTC_WR1:
+1:
 	PUSH	AF			; save accumulator as it is the index counter in FOR loop
 	LD	A,C			; get the value to be written in A from C (passed value to write in C)
 	BIT	0,A			; is LSB a 0 or 1?
-	JP	Z,RTC_WR2		; if it's a 0, handle it at RTC_WR2.
+	JP	Z,2f			; if it's a 0, handle it at RTC_WR2.
 					; LSB is a 1, handle it below
 					; setup RTC latch with RST and DATA high, SCLK low
 	LD	A,mask_rst + mask_data
@@ -5569,9 +5686,8 @@ RTC_WR1:
 					; setup RTC with RST, DATA, and SCLK high
 	LD	A,mask_rst + mask_clk + mask_data
 	OUT	(RTC),A		; output to RTC latch
-	JP	RTC_WR3		; exit FOR loop 
-
-RTC_WR2:
+	JP	3f		; exit FOR loop 
+2:
 					; LSB is a 0, handle it below
 	LD	A,mask_rst		; setup RTC latch with RST high, SCLK and DATA low
 	OUT	(RTC),A		; output to RTC latch
@@ -5579,14 +5695,13 @@ RTC_WR2:
 					; setup RTC with RST and SCLK high, DATA low
 	LD	A,mask_rst + mask_clk
 	OUT	(RTC),A		; output to RTC latch
-
-RTC_WR3:
+3:
 	CALL	Delay	; let it settle a while
 	RRC	C			; move next bit into LSB position for processing to RTC
 	POP	AF			; recover accumulator as it is the index counter in FOR loop
 	INC	A			; increment A in FOR loop (A=A+1)
 	CP	08H			; is A < $08 ?
-	JP	NZ,RTC_WR1		; No, do FOR loop again
+	JP	NZ,1b			; No, do FOR loop again
 	RET				; Yes, end function and return
 
 
@@ -5622,8 +5737,7 @@ RTC_RD:
 	XOR	A			; set A=0 index counter of FOR loop
 	LD	C,00H			; set C=0 output of RTC_RD is passed in C
 	LD	B,01H			; B is mask value
-
-RTC_RD1:
+1:
 	PUSH	AF			; save accumulator as it is the index counter in FOR loop
 					; setup RTC with RST and RD high, SCLK low
 	LD	A,mask_rst + mask_rd
@@ -5631,13 +5745,13 @@ RTC_RD1:
 	CALL	Delay	; let it settle a while
 	IN	A,(RTC)		; input from RTC latch
 	BIT	0,A			; is LSB a 0 or 1?
-	JP	Z,RTC_RD2		; if LSB is a 1, handle it below
+	JP	Z,2f		; if LSB is a 1, handle it below
 	LD	A,C
 	ADD	A,B
 	LD	C,A
 ;	INC	C
 					; if LSB is a 0, skip it (C=C+0)
-RTC_RD2:
+2:
 	RLC	B			; move input bit out of LSB position to save it in C
 					; setup RTC with RST, SCLK high, and RD high
 	LD	A,mask_rst + mask_clk + mask_rd
@@ -5646,7 +5760,7 @@ RTC_RD2:
 	POP	AF			; recover accumulator as it is the index counter in FOR loop
 	INC	A			; increment A in FOR loop (A=A+1)
 	CP	08H			; is A < $08 ?
-	JP	NZ,RTC_RD1		; No, do FOR loop again
+	JP	NZ,1b		; No, do FOR loop again
 	RET				; Yes, end function and return.  Read RTC value is in C
 
 ; function RTC_WRITE
