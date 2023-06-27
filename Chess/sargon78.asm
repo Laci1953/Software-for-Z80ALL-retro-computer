@@ -3907,7 +3907,7 @@ LoadGame:
 	sla	d
 	sla	d
 	sla	d
-	or	a
+	or	d
 	ld	(hl),a
 
 	inc	hl
@@ -3921,7 +3921,7 @@ LoadGame:
 	sla	d
 	sla	d
 	sla	d
-	or	a
+	or	d
 	ld	(hl),a
 
 	inc	hl
@@ -3935,7 +3935,7 @@ LoadGame:
 	sla	d
 	sla	d
 	sla	d
-	or	a
+	or	d
 	ld	(hl),a
 				; it will be displayed at the next InitRTC call
 				; store game info
@@ -5463,12 +5463,6 @@ InitRTC:
 	LD	D,06H
 	LD	A,1
 	LD	E,A
-	CALL RTC_WRITE
-	CALL RTC_WR_PROTECT
-;restart
-	CALL RTC_WR_UNPROTECT
-	LD	D,00H
-	LD	E,00H
 	CALL RTC_WRITE
 	CALL RTC_WR_PROTECT
 					;write (time) at LINE 0, COL 56
