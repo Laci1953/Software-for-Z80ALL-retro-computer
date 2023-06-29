@@ -1,0 +1,5 @@
+c -v -c -o st1.c
+c -v -c -o st2.c
+z80as -j rand
+z80as -j graphics
+z80as -j file
