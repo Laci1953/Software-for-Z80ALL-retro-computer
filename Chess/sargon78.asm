@@ -3816,13 +3816,9 @@ HitAnyKey:
 ;
 ;----------------------------------------------
 
-Record:				;128 bytes buffer used at load/save game
-kolor:	defs	1
-depth:	defs	1
-moveno:	defs	1
-time:	defs	3		;accumulated match time (S,M,H)
-board:	defs	120
-	defs	2
+Record:				;256 bytes buffer used at load/save game
+	defs	253
+time:	defs	3		;(S,M,H)
 
 fcb:				; fcb
 	defb	0		; disk+1
@@ -3872,14 +3868,14 @@ LoadGame:
 
 	ld	de,CannotOpen	; file not found
 	call	show_string_de
-	jp	0		; quit
+	EXIT			; quit
 1:
+	xor	a		; prepare fcb
+	ld	(fcbcr),a
+
 	ld	de,Record	; set DMA addr
 	ld	c,26
 	call	BDOS
-
-	xor	a		; prepare fcb
-	ld	(fcbcr),a
 
 	ld	de,fcb		; read record		
 	ld	c,20
@@ -3889,11 +3885,34 @@ LoadGame:
 
 	ld	de,CannotRead	; read failed
 	call	show_string_de
-	jp	0		; quit
+	EXIT			; quit
+1:
+	ld	de,Record+128	; set DMA addr
+	ld	c,26
+	call	BDOS
+
+	ld	de,fcb		; read record		
+	ld	c,20
+	call	BDOS
+	or	a
+	jr	z,1f
+
+	ld	de,CannotRead	; read failed
+	call	show_string_de
+	EXIT			; quit
 1:
 	ld	de,fcb		; close file
 	ld	c,16
 	call	BDOS
+				; load info
+	ld	hl,Record
+	ld	de,BOARDA
+	ld	bc,0ABH
+	ldir
+
+	ld	de,M1
+	ld	bc,34H
+	ldir
 				; (time) contains now the cumulated match time
 				; translate the bytes into decimal ASCII
 	ld	hl,time
@@ -3936,18 +3955,9 @@ LoadGame:
 	sla	d
 	sla	d
 	or	d
-	ld	(hl),a
-				; it will be displayed at the next InitRTC call
-				; store game info
-	ld	a,(kolor)
-	ld	(KOLOR),a
+	ld	(hl),a		; it will be displayed at the next InitRTC call
 
-	ld	a,(depth)
-	ld	(PLYMAX),a
-
-	ld	a,(moveno)
-	ld	(MOVENO),a
-				;store to MVENUM A in ASCII decimal
+	ld	a,(MOVENO)	;store to MVENUM A in ASCII decimal
 	ld	hl,MVENUM
 
 	ld	d,a
@@ -3967,11 +3977,6 @@ LoadGame:
 
 	inc	hl
 	ld	(hl),' '
-
-	ld	de,BOARDA	;to
-	ld	hl,board	;from
-	ld	bc,120		;count
-	ldir
 				;setup titles
 	ld	a,(KOLOR)
 	or	a
@@ -4021,22 +4026,18 @@ savegame:
 	jr	nc,1b
 
 	ld	(fname+10),a	; Store game # as final ext char
+
 				; store game info
-	ld	a,(KOLOR)
-	ld	(kolor),a
+	ld	de,Record
+	ld	hl,BOARDA
+	ld	bc,0ABH
+	ldir
 
-	ld	a,(PLYMAX)
-	ld	(depth),a
-
-	ld	a,(MOVENO)
-	ld	(moveno),a
+	ld	hl,M1
+	ld	bc,34H
+	ldir
 
 	call	StoreTime	;get current time in (time)
-
-	ld	hl,BOARDA	;from
-	ld	de,board	;to
-	ld	bc,120		;count
-	ldir
 
 	ld	de,fcb		; delete file (if any...)
 	ld	c,19
@@ -4053,12 +4054,26 @@ savegame:
 	call	show_string_de
 	EXIT			; quit
 1:
+	xor	a		; prepare fcb
+	ld	(fcbcr),a
+
 	ld	de,Record	; set DMA addr
 	ld	c,26
 	call	BDOS
 
-	xor	a		; prepare fcb
-	ld	(fcbcr),a
+	ld	de,fcb		; write record		
+	ld	c,21
+	call	BDOS
+	or	a
+	jr	z,1f
+
+	ld	de,CannotWrite	; write failed
+	call	show_string_de
+	EXIT			; quit
+1:
+	ld	de,Record+128	; set DMA addr
+	ld	c,26
+	call	BDOS
 
 	ld	de,fcb		; write record		
 	ld	c,21
