@@ -9,3 +9,5 @@ Also, I used some small graphics to represent the klingons, the Enterprise stars
 A very effective random number generator is used; the "seed" is computed by summing all the characters from the screen!
 
 All the st.* files must be present on the current disk, containing the executable
+
+The st.txt file contains a short user manual.
