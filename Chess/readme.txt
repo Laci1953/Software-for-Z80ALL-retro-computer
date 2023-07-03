@@ -1,6 +1,6 @@
 The Sargon78 chess
 
-- chess board using pieces represented as 3 x 3 char bitmaps (see picture)
+- chess board using pieces represented as 3 x 3 char bitmaps 
 - match time displayed
 - move time displayed
 - total match time displayed at match end
