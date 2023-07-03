@@ -3517,8 +3517,10 @@ show_mated_king:
 
 store_background_colour:
         ld      a, h
-        xor     l
+        add	a,l
         and     1
+	inc	a
+	and	1
         ld      (BACKGROUND_COLOUR), a
         ret
 
