@@ -1,4 +1,5 @@
 Real time clock utility
+-----------------------
 
 Measures time in HH:MM:SS
 
@@ -11,7 +12,7 @@ Use:
 00:00:03 since the last clock call...
 >
 
-Very useful to measure the performance of CP/M programs
+Very useful to measure the execution speed of CP/M programs
 
 Example:
 
