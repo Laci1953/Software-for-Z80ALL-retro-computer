@@ -87,7 +87,6 @@ bool whosehome( int who );
 void checkwin(void);
 int other( int color );
 void winner( int who, int high );
-void putscore(void);
 void reverse(void);
 void halfswap( int n );
 void wipedice(void);
@@ -285,7 +284,7 @@ void	chooseplayer(void) {
 ======================================================================*/
 
 char *p1 = "Play,Reverse,Swap,New,Quit,Load,(CR : more)";
-char *p2 = "Use %s dice,Opponent,Count,Zero(CR : go back)";
+char *p2 = "Use %s dice,Opponent,Count(CR : go back)";
 
 void main(void) {
 char ch;
@@ -364,10 +363,6 @@ char ch;
 					break;
 				case 'N': {  /* abandon game without quitting */
 					deciding = FALSE; player = 0;
-					break;
-					}
-				case 'Z': { /* zero the score */
-					myscore = yrscore = 0; putscore();
 					break;
 					}
 				case 3:	EXIT();//CTRL^C
@@ -788,16 +783,9 @@ int gammon;
 		case ME: { myscore += gammon; break; }
 		case YOU: { yrscore += gammon; break; }
 	}
-	putscore();
-	msg("Hit any key to resume play"); 
+	msg("Hit any key to quit"); 
 	getch();
-	player = 0;
-	reverse(); deciding = FALSE; 
-}
-
-void putscore(void) {
-	gotoxy(41,0); blanks(22); gotoxy(41,0);
-	printf("SCORE: You %d, Me %d",yrscore,myscore);
+	EXIT(); 
 }
 
 /*========================================================================
@@ -824,10 +812,10 @@ int cnt1, cnt2, cnt3, cnt4;
 	gotoxy(0,11);  putchar(' ');  /* erase HOME message */
 	gotoxy(63,11); putchar(' ');
 	if (point[1].x < 30) {
-		point[MYHOME].x = point[YRHOME].x = 0;
+		point[MYHOME].x = point[YRHOME].x = 2;
 	}
 	else {
-		point[MYHOME].x = point[YRHOME].x = 63;
+		point[MYHOME].x = point[YRHOME].x = 61;
 	}
 
 	point[MYHOME].owner  = point[MYBAR].owner = ME; /* restore counts */
@@ -875,7 +863,7 @@ int i, x, c;
 	if (point[1].x < 30) x = 0; else x = 63;
 	gotoxy(x,11); putchar('H');
 
-	putscore(); mytotal(); yrtotal();
+	mytotal(); yrtotal();
 }
 
 /*==========================================================================
@@ -929,7 +917,7 @@ int i, j, k;
 	}
 
 	point[MYBAR].x  = point[YRBAR].x  = 31;
-	point[MYHOME].x = point[YRHOME].x = 63;
+	point[MYHOME].x = point[YRHOME].x = 0;
 
 	point[MYBAR].y  = point[MYHOME].y =  5;
 	point[YRBAR].y  = point[YRHOME].y = 17;
