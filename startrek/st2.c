@@ -3,7 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define Z80ALL
+//#define Z80ALL
 
 /* Standard Terminal Sizes */
 
@@ -11,7 +11,7 @@
 #define MAXROW      48
 #define MAXCOL      64
 #else
-#define MAXROW      28
+#define MAXROW      24
 #define MAXCOL      80
 #endif
 
@@ -165,7 +165,6 @@ void phaser_control(void)
 			/* We are now 32bit with four digits accuracy */
 			h = h1 * (get_rand(100) + 200);
 			/* Takes us down to 2 digit accuracy */
-
 			h /= distance_to(k);
 
 			if (h <= 15 * k->energy) {	/* was 0.15 */
