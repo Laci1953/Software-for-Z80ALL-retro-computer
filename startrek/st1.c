@@ -93,7 +93,7 @@
 #define MAXROW      48
 #define MAXCOL      64
 #else
-#define MAXROW      28
+#define MAXROW      24
 #define MAXCOL      80
 #endif
 
@@ -594,7 +594,7 @@ void course_control(void)
 		c1 = 100;
 
 	if (c1 < 0 || c1 > 900) {
-		printf("Lt. Sulu%s", inc_1);
+		printf("Lt. Sulu %s", inc_1);
 		return;
 	}
 
