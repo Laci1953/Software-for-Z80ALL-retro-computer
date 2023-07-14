@@ -121,7 +121,7 @@ void phaser_control(void)
 	register int i;
 	long phaser_energy;
 	long h1;
-	int h;
+	long h;
 	struct klingon *k = kdata;
 
 	if (inoperable(4))
@@ -220,7 +220,7 @@ void photon_tor(void)
 		c1 = 100;
 
 	if (c1 < 100 || c1 >= 900) {
-		printf("Ensign Chekov%s", inc_1_);
+		printf("Ensign Chekov %s", inc_1_);
 		return;
 	}
 
