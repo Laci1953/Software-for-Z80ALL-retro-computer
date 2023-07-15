@@ -3,7 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 
-//#define Z80ALL
+#define Z80ALL
 
 /* Standard Terminal Sizes */
 
@@ -553,7 +553,7 @@ void dirdist_calc(void)
 	if (targetX < 0 || targetX > 900)
 		return;
 
-	compute_vector(targetX, targetY, ship_x, ship_y);
+	compute_vector(targetY, targetX, ship_y, ship_x);
 }
 
 char *gm_1 = "  ----- ----- ----- ----- ----- ----- ----- -----\n";
