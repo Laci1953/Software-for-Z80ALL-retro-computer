@@ -19,7 +19,7 @@
 
 	GLOBAL	_xrnd, _xrndseed
 
-Z80ALL	equ	0
+Z80ALL	equ	1
 
 _xrnd:
 	ld	hl,1		; seed must not be 0
