@@ -10,7 +10,7 @@
 #include <ctype.h>
 
 //uncomment for VT52/Z80ALL, else it will be VT100 compatible
-//#define Z80ALL
+#define Z80ALL
 
 #define bool char
 #define TRUE 1
