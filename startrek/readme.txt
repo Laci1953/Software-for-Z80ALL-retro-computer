@@ -1,6 +1,6 @@
 (updated on August 9)
 
-The Startrek game
+The Startrek game, configured for Z80ALL
 
 Thanks to Alan Cox ( https://github.com/EtchedPixels/FUZIX/tree/master/Applications/games ), I had a very solid starting point.
 
