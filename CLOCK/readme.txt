@@ -1,4 +1,4 @@
-Real time clock utility
+Real time clock utility, for Z80ALL
 -----------------------
 
 Measures time in HH:MM:SS
