@@ -1,4 +1,4 @@
-The Sargon78 chess
+The Sargon78 chess game, configured for Z80ALL
 
 - chess board using pieces represented as 3 x 3 char bitmaps 
 - match time displayed
