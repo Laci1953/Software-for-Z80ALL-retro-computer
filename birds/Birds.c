@@ -320,7 +320,6 @@ bool	MoveEagle(int deltaX, int deltaY)
 	{
 		// kite obstructs the eagle, flash the kite
 		StartTimer(TimerFlapWings, SemFlapWings, FLAP_WINGS_TICS, 0);
-		CrtLocate(KiteX, KiteY);
 		OutCharVGA(KiteX, KiteY, KITE | 0x80);
 		Wait(SemFlapWings);
 		OutCharVGA(KiteX, KiteY, KITE);
