@@ -1,1 +1,1 @@
-The Sudoku game, with game save/load
+The Sudoku game, with real time clock & game save/load
