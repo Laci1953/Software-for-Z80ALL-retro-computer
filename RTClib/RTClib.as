@@ -313,7 +313,7 @@ ComputeLapse:
 ;	Get current time, store-it in StartTime
 ;
 _GetStartTime:
-	call	GetTime		;E = seconds
+	call	_GetTime		;E = seconds
 				;D = minutes
 				;L = hours
 				;H = 0
@@ -329,7 +329,7 @@ _GetStartTime:
 ;	Get current time, store-it in StopTime
 ;
 _GetStopTime:
-	call	GetTime		;E = seconds
+	call	_GetTime		;E = seconds
 				;D = minutes
 				;L = hours
 				;H = 0
