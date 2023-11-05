@@ -73,13 +73,13 @@
 */
 
 //#define M64 1
-#define M128	1
+//#define M128	1
 //#define M512	1
-//#define Z80ALL	1
+#define Z80ALL	1
 //#define SC108	1	
 //#define MM 1
 //#define SC114 1
-#define S80 1
+//#define S80 1
 
 #ifdef Z80ALL
 #define HEAP1	0x6000
