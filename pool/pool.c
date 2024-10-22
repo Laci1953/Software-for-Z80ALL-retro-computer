@@ -744,7 +744,7 @@ void get_balls_coord(void)
 	_y1 = _Y1 << 8;
 }
 
-// TO DO - use custom fonts for '+', return also XCHf, YCHf
+// use custom fonts for '+', return also XCHf, YCHf
 //
 // determine crosshair coord (col, row)
 // and show-it
